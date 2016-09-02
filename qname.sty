@@ -1,0 +1,207 @@
+% This package provides support for prefixes in qnames
+%
+% Defined options:
+% presetPrefixes:
+%       execute \setprefix{}{} for some common vocabularies resp. well known prefixes i.e. dc, dct, foaf, ov, owl, rdf, rdfs, sioc, sioct, xsd
+%       Notice: if you are plaaning ues \listUsedPrefixes it will produce a list includin those predefined prefixes, which might not be wat you want.
+%
+% Defined commands:
+% \setprefix{foaf}{http://xmlns.com/foaf/0.1/}
+%       Define a prefix namespace
+% \getprefix{foaf}
+%       Get a defined prefix namespace
+% \prefix{foaf}
+% \prefix*{foaf}
+%       Just output the prefix linked to the namespace (The star-version additionally prints the namespace URI in a \footnote)
+% \qname{foaf:Person} has to contain a colon
+%       Write a qname, where the prefix will be linked to the defined namespace and the qualifier will be linked to the whole URI
+% \mailto{arndtn@gmail.com}
+%       Write an email-Address and link it with a mailto: in front of it (actually this shouldn't be in a qname package ;-) )
+% \setprefixDescription{foaf}{Friend of a Friend (FOAF): an experimental linked information system.}
+%       Define a short description for a prefix/vocabulary
+% \listUsedPrefixes
+% \listUsedPrefixes*
+%       Produces a list of the used resp. defined prefix mappings
+%
+% Additional behaviour:
+% This package additionally adds defines some more characters for automatically wrapping URLs at CamelCaps
+%
+% Changelog:
+% 0.01:
+%   * Add \setprefix, \getprefix, \qname and \mailto
+% 0.02:
+%   * Add \prefix
+%   * Add support for wrapping urls and qnames with camel caps
+%   * Add some commonly used prefixes (dc, dct, foaf, ov, rdf, sioc, sioct and xsd)
+% 0.03
+%   * Add star version: \prefix*, to print the namespace URI in a \footnote
+%   * Add \setprefixDescription to define a short description for a vocabulary
+%   * Add \listUsedPrefixes to list all defined/used prefixes and its description
+%   * Add page number command to list of used Prefixes (label must be set manually …)
+%   * Add \listUsedPrefixes* for a simplified prefix list
+%   * Improve implementation of \setprefix and \getprefix
+% 0.04
+%   * Add 'presetPrefixes' package option
+%   * Remove \makeatletter and \makeatother which are not needed in the package (https://en.wikibooks.org/wiki/LaTeX/Creating_Packages#makeatletter_and_makeatother)
+%   * Move some code arround and add comments for all commands
+%   * Document bonus feature (wrapping camel caps URLs)
+%   * Remove some unused code
+% 0.05
+%   * Mark internal commands with @
+%   * fix \listUsedPrefixes and \listUsedPrefixes*
+% 0.06
+%   * Add \setQNameStyle to define a style for \qname if it should be different to the defined \urlstyle (default: use \urlstyle)
+%   * Fix \listUsedPrefixes* by adding a space after the delimiter (", ")
+%
+% (c) 2013–2016 Natanael Arndt
+% Thanks to all the contributors of
+% - http://tex.stackexchange.com/questions/114666/create-an-array-of-variables-with-string-keys
+% - http://tex.stackexchange.com/questions/114635/using-variables-in-a-command-results-in-argument-of-reserveda-has-an-extra
+% - http://tex.stackexchange.com/questions/95093/automatic-line-breaking-of-camel-case-within-url
+% especially to David Carlisle
+%
+% LPPL LaTeX Public Project License
+%
+\NeedsTeXFormat{LaTeX2e}[1994/06/01]
+\ProvidesPackage{qname}
+  [2016/02/27 v0.06 LaTeX package for prefix support in qnames]
+
+\RequirePackage{hyperref}
+\RequirePackage{url}
+\RequirePackage{etoolbox}       % Tool-box for LaTeX programmers using e-TeX
+\RequirePackage{ifthen}
+
+% todo: sort alphabetical http://tex.stackexchange.com/questions/6988/how-to-sort-an-alphanumeric-list
+
+% \setQNameStyle
+% The style can be "tt", "rm", "sf" or "same" or any other defined url style
+% Please take a look at the url packes documentation for further advice
+\newcommand{\setQNameStyle}[1]{%
+  \csdef{@qnamestyle}{#1}%
+}
+
+% \setprefix and \getprefix commands
+\newcommand{\setprefix}[2]{%
+  \csdef{prefix@#1}{#2}%
+  \listadd{\qnames}{#1}%
+}
+\newcommand{\getprefix}[1]{%
+  \csuse{prefix@#1}%
+}
+
+% \setprefixDescription command
+\newcommand{\setprefixDescription}[2]{%
+\csdef{prefixdesc@#1}{#2}%
+\listadd{\qnamesWithDesc}{#1}%
+}
+
+\newcommand{\@getprefixdesc}[1]{%
+\csuse{prefixdesc@#1}%
+}
+
+\newcommand{\@prefixRefList}[1]{\pageref{qname:#1}}
+
+\newcommand \@prefixdotfill {\leavevmode \cleaders \hb@xt@ .7em{\hss .\hss }\hfill \kern \z@}
+
+%%
+% A list of the used prefixes with a verbose description
+%
+\newcommand{\@renderPrefixListItem}[1]{%
+\ifthenelse{\equal{\getprefix{#1}}{\@empty}}
+  {\relax}
+  {%
+      \noindent \prefix{#1} \@prefixdotfill \url{\getprefix{#1}}\\
+      {\small\@getprefixdesc{#1}}
+      \@prefixdotfill\hspace{1.5mm}\@prefixRefList{#1}
+
+      \bigskip
+  }
+}
+
+%%
+% A simple comma seperated list of prefix/namespace definitions
+%
+\newcommand{\@renderPrefixListItemStar}[1]{%
+\ifthenelse{\equal{\getprefix{#1}}{\@empty}}
+  {\relax}
+  {%
+    \itemdelim\
+    \prefix{#1}: \url{\getprefix{#1}}%
+  }%
+}
+
+% \listUsedPrefixes and \listUsedPrefixes* commands
+\newcommand{\listUsedPrefixes}{\@ifstar\@listUsedPrefixesStar\@listUsedPrefixesNoStar}
+
+\newcommand{\@listUsedPrefixesNoStar}{%
+\forlistloop{\@renderPrefixListItem}{\qnamesWithDesc}
+}
+
+\newcommand{\@listUsedPrefixesStar}{%
+\def\itemdelim{\def\itemdelim{, }}% Define a delimiter which is delayed according to http://tex.stackexchange.com/a/89187/5764
+\forlistloop{\@renderPrefixListItemStar}{\qnames}%
+}
+
+% \prefix and \prefix* commands
+\newcommand{\prefix}{\@ifstar\@prefixStar\@prefixNoStar}
+\newcommand{\@prefixStar}[1]{\href{\getprefix{#1}}{\nolinkurl{#1}}\footnote{#1: \getprefix{#1}}}
+\newcommand{\@prefixNoStar}[1]{\href{\getprefix{#1}}{\nolinkurl{#1}}}
+
+% \qname command
+\def\qname#1{\@xqname#1\\}
+
+% Alternatively to \urlstyle could \def\UrlFont{\ttfamily} be used, which seems to be more flexible
+\def\@xqname#1:#2\\{%
+  \let\@QNameOrigUrlFont\UrlFont%                       store original UrlFont
+  \ifcsdef{@qnamestyle}{\urlstyle{\@qnamestyle}}{}%     if \setQNameStyle was called, set the style accordingly
+  \href{\getprefix{#1}}{\nolinkurl{#1:}}%
+  \href{\getprefix{#1}#2}{\nolinkurl{#2}}%
+  \let\UrlFont\@QNameOrigUrlFont%                       reset original UrlFont
+}
+
+% 'presetPrefixes' option
+\DeclareOption{presetPrefixes}{
+  % Predefined namespace prefixes
+  \setprefix{dc}{http://purl.org/dc/elements/1.1/}
+  \setprefix{dct}{http://purl.org/dc/terms/}
+  \setprefix{foaf}{http://xmlns.com/foaf/0.1/} % http://xmlns.com/foaf/spec/\#term_
+  \setprefix{ov}{http://open.vocab.org/docs/}
+  \setprefix{owl}{http://www.w3.org/2002/07/owl\#}
+  \setprefix{rdf}{http://www.w3.org/1999/02/22-rdf-syntax-ns\#}
+  \setprefix{rdfs}{http://www.w3.org/2000/01/rdf-schema\#}
+  \setprefix{sioc}{http://rdfs.org/sioc/ns\#} % http://rdfs.org/sioc/spec/\#term_
+  \setprefix{sioct}{http://rdfs.org/sioc/types\#}
+  \setprefix{xsd}{http://www.w3.org/2001/XMLSchema\#}
+}
+
+\ProcessOptions\relax
+
+% Some bonus functionality, which actually isn't in the scope of this package but very usefull
+
+% \mailto command
+\newcommand{\mailto}[1]{\href{mailto:#1}{\nolinkurl{#1}}}
+
+% Automatic Wrapping URLs at Camel Caps
+% http://tex.stackexchange.com/questions/95093/automatic-line-breaking-of-camel-case-within-url
+\g@addto@macro\UrlSpecials{\camelurl}
+\def\camelurl{%
+\count@`a
+\loop
+\mathcode\count@"8000
+\uccode`\~\count@\uppercase{\edef~{\mathchar\the\count@\noexpand\breakifupper}}%
+\ifnum\count@<`\z
+\advance\count@\@ne
+\repeat}
+
+\def\breakifupper#1{%
+\ifcat .\noexpand#1%
+\ifnum`#1>40
+\ifnum`#1<91
+\penalty\z@
+\fi\fi\fi
+#1%
+}
+
+\endinput
+%%
+%% End of file `qname.sty'.
